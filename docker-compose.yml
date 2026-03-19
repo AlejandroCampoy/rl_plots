@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jupyter_notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work/notebooks
+      - /Users/david_mac/Documents/LAB_EVALUATION:/home/jovyan/work/data
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - GRANT_SUDO=yes
+      - PYTHONPATH=/home/jovyan/work/src
+      # Uncomment to set a specific token or password
+      # - JUPYTER_TOKEN=your_token_here
+      # - JUPYTER_PASSWORD=your_password_here
+    restart: unless-stopped
+    # Uncomment if you need to use more resources
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '1'
+    #       memory: 2G
+
+volumes:
+  notebooks:
+  data: 

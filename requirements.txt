@@ -1,0 +1,12 @@
+numpy
+pandas
+scikit-learn
+scipy
+
+# Data visualization
+matplotlib
+seaborn
+plotly
+bokeh
+
+wandb
