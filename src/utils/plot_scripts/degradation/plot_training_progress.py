@@ -6,18 +6,35 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-ROOT = Path(__file__).resolve().parent
+from utils.plot_functions.plot_functions import save_figure
+
+# Project root: .../work (plot_training_progress.py is under src/utils/plot_scripts/degradation/)
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+# Base folder for robustness evaluations (matches .../data/paper/data/pilot_study/eval_por_robustez)
+EVAL_ROBUSTEZ_BASE = (
+    PROJECT_ROOT
+    / "data"
+    / "paper"
+    / "data"
+    / "pilot_study"
+    / "eval_por_robustez"
+)
 
 # Original Case 2 baseline
-ORIGINAL_DIR = "Eval-DRL-Baseline-2026-case-2_2025-12-17_10:31-res1"
+ORIGINAL_DIR = (
+    PROJECT_ROOT
+    / "data/paper/data/pilot_study/eval_por_caso/Eval-DRL-Baseline-2026-cases/caso2/"
+    "Eval-DRL-Baseline-2026-case-2_2025-12-17_10:31-res1"
+)
 ORIGINAL_LABEL = "Original (TQC)"
 ORIGINAL_COLOR = "#2E86AB"  # Blue
 
 # Directories with evaluations
 EVAL_DIRS = {
-    "initial": ROOT / "evaluaciones-iniciales",
-    "1ep": ROOT / "evaluaciones-1ep-entrenado",
-    "5ep": ROOT / "evaluaciones-5ep-entrenado",
+    "initial": EVAL_ROBUSTEZ_BASE / "evaluaciones-iniciales",
+    "1ep": EVAL_ROBUSTEZ_BASE / "entrenamiento-1ep",
+    "5ep": EVAL_ROBUSTEZ_BASE / "entrenamiento-5ep",
 }
 
 # Evaluation stage labels
@@ -238,12 +255,13 @@ def plot_model_progress(
         model_output_dir = output_dir / model_key
         model_output_dir.mkdir(parents=True, exist_ok=True)
 
-        fig.write_html(model_output_dir / filename)
+        path_stem = model_output_dir / Path(filename).stem
+        save_figure(fig, path_stem, width=800, height=500, scale=2)
 
 
 def main() -> None:
     """Main entry point."""
-    output_dir = ROOT / "training_progress_plots"
+    output_dir = PROJECT_ROOT / "data/paper/plots/pilot_study/training_and_evaluation/degradation"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Metrics to plot
@@ -272,7 +290,7 @@ def main() -> None:
     print(f"Found {len(models)} models")
 
     # Load original baseline data
-    original_path = ROOT / ORIGINAL_DIR / "progress.csv"
+    original_path = ORIGINAL_DIR / "progress.csv"
     original_df = None
     if original_path.exists():
         try:
@@ -305,7 +323,7 @@ def main() -> None:
             len(sorted_models),
             original_df)
 
-    print(f"\nInteractive plots saved in: {output_dir}")
+    print(f"\nPlots (HTML + PNG) saved in: {output_dir}")
     print(f"\nGenerated plots for {len(sorted_models)} models:")
     for model_key, _ in sorted_models:
         print(f"  - {model_key}")

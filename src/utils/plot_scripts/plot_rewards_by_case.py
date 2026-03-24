@@ -3,11 +3,11 @@ import plotly.graph_objects as go
 
 # Read the CSV files
 case1_df = pd.read_csv(
-    '/workspaces/python-plot-env/artifacts/baseline_drl_2026/case1/progress.csv')
+    '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso/Eval-DRL-Baseline-2026-cases/caso1/Eval-DRL-Baseline-2026-case-1_2025-12-17_10:25-res1/progress.csv')
 case2_df = pd.read_csv(
-    '/workspaces/python-plot-env/artifacts/baseline_drl_2026/case2/progress.csv')
+    '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso/Eval-DRL-Baseline-2026-cases/caso2/Eval-DRL-Baseline-2026-case-2_2025-12-17_10:31-res1/progress.csv')
 case3_df = pd.read_csv(
-    '/workspaces/python-plot-env/artifacts/baseline_drl_2026/case3/progress.csv')
+    '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso/Eval-DRL-Baseline-2026-cases/caso3/Eval-DRL-Baseline-2026-case-3_2025-12-17_10:35-res1/progress.csv')
 
 # Create the plotly figure
 fig = go.Figure()
@@ -67,5 +67,5 @@ fig.update_layout(
 )
 
 # Save as HTML
-fig.write_html('/workspaces/python-plot-env/rewards_plot.html')
+fig.write_html('./data/paper/plots/pilot_study/training_and_evaluation/rewards_plot.html')
 print("Gráfico guardado en rewards_plot.html")

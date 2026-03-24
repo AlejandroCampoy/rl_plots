@@ -36,14 +36,15 @@ from plot_functions import (
 # CONFIG — DATA PATHS & EXPERIMENTS
 # =============================================================================
 
-DATA_DIR = '/workspaces/sinergym/plots/Eplus-diffuse'
+DATA_DIR = '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1'
 EPISODE = 2
 
 # Clave -> nombre de carpeta bajo DATA_DIR (cada una con progress.csv y episode-N/monitor/)
 EXPERIMENTS = {
-    'baseline-real': 'Eplus-baseline-real-res1',
-    #'baseline-variable': 'Eplus-baseline-variable-res1',
-    'TQC-real-setpoints': 'Eplus-TQC-fixed-diffuse-humidity_2026-03-12_11:42-res1',
+    'ppo': 'Eplus-PPO-radiant_case1_heating-Example_2026-03-16_13:32-res1',
+    'tqc': 'Eplus-TQC-radiant_case1_heating-Example_2026-03-19_08:28-res1',
+    'sac': 'Eplus-SAC-radiant_case1_heating-Example_2026-03-16_13:42-res1',
+    'rpo': 'Eplus-RecurrentPPO-radiant_case1_heating-Example_2026-03-16_13:41-res1',
 }
 
 # Progress del ENTRENAMIENTO (mean_reward por episodio). Rutas externas a DATA_DIR.
@@ -53,10 +54,11 @@ TRAINING_PROGRESS_PATHS: dict[str, str] = {
     # 'TQC': '/workspaces/sinergym/artifacts/TQC_humidity_fix/Sinergym_output/progress.csv',
 }
 
-names_reference = ['baseline-real']
+names_reference = ['ppo']
 names_comparison = [
-    'TQC-real-setpoints',
-    #'TQC-variable-setpoints',
+    'tqc',
+    'sac',
+    'rpo',
 ]
 combination_size = len(names_reference) * len(names_comparison)
 
@@ -68,7 +70,7 @@ SMOOTH_WINDOW = 1
 # CONFIG — OUTPUT DIRECTORIES (subcarpetas por tipo de gráfico)
 # =============================================================================
 
-OUTPUT_BASE = Path('/workspaces/sinergym/plots/diffuse-plots')
+OUTPUT_BASE = Path('/home/jovyan/work/data/paper/plots/pilot_study/training_and_evaluation/caso_1')
 OUTPUT_PROGRESS = OUTPUT_BASE / 'progress'
 OUTPUT_ZONE_TEMPERATURES = OUTPUT_BASE / 'zone_temperatures'
 OUTPUT_TEMP_VS_FLOW = OUTPUT_BASE / 'temp_vs_flow'
