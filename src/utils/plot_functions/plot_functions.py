@@ -1,6 +1,8 @@
 import math
 import os
+from datetime import datetime
 from pathlib import Path
+from typing import List, Literal, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -541,6 +543,7 @@ def plot_smoothed_signal(
         title=title,
         xaxis_title='',
         yaxis_title=yaxis_title if yaxis_title is not None else variable,
+        font=dict(family="Arial, sans-serif", size=20, color="black"),
         legend=dict(
             orientation='h',
             yanchor='bottom',
@@ -1208,7 +1211,8 @@ def plot_bar(dict_data, bar_colors=None):
             marker=dict(color=bar_colors),
             text=values,
             textposition='inside',
-            texttemplate='%{text:.4f}',  # Lista de colores
+            texttemplate='%{text:.4f}',
+            textfont=dict(color='white'),
         )
     )
 
@@ -1531,6 +1535,16 @@ def plot_bar_groups_v2(dict_data):
 # =============================================================================
 
 
+def _variable_name_to_axis_label(name: str) -> str:
+    """Etiqueta de eje: '_' → espacio, solo la 1.ª letra en mayúscula; ``water_temperature`` añade ``(ºC)``."""
+    raw = str(name)
+    s = raw.replace('_', ' ').strip().lower()
+    out = (s[0].upper() + s[1:]) if s else raw
+    if raw == 'water_temperature':
+        out = f'{out} (ºC)'
+    return out
+
+
 def plot_action_distribution(df_dict, variable, colors=None):
     """Distribución (violín) de una variable por experimento. df_dict: nombre -> DataFrame."""
     names = list(df_dict.keys())
@@ -1613,8 +1627,9 @@ def plot_action_distribution(df_dict, variable, colors=None):
     layout_kwargs = dict(
         title=f'{variable} distribution',
         xaxis_title='Model',
-        yaxis_title=variable,
+        yaxis_title=_variable_name_to_axis_label(variable),
         violinmode='overlay',
+        font=dict(family="Arial, sans-serif", size=20, color="black"),
     )
     if plotted_names:
         layout_kwargs['xaxis'] = dict(
@@ -1864,3 +1879,505 @@ def plot_summary_data(data):
     )
 
     return fig
+
+
+# PLOT TEMP BY ZONES WITH ORANGE BAND
+# =============================================================================
+
+def _obs_x_values(obs_data: pd.DataFrame):
+    """Time axis for temperature helpers: ``datetime`` column if present, else index."""
+    if "datetime" in obs_data.columns:
+        return obs_data["datetime"]
+    return pd.Series(obs_data.index, index=obs_data.index)
+
+
+def _outdoor_yaxis2_layout():
+    """Right Y axis for outdoor temperature (same idea as :func:`plot_temperature_one_zone`)."""
+    return dict(
+        title=dict(text="Outdoor temperature (°C)", font=dict(color="gray")),
+        overlaying="y",
+        side="right",
+        showgrid=False,
+        tickfont=dict(color="gray"),
+    )
+
+
+def add_temperature_traces(
+    fig,
+    obs_data,
+    temp_col,
+    sp_col,
+    show_legend=True,
+    row=None,
+    col=None,
+    threshold=1.0,
+    temp_color=None,
+    outdoor_temp_var="outdoor_temperature",
+):
+    """Add comfort band + indoor temp (in/out of band) + optional outdoor series.
+
+    Parameters match :func:`plot_temperature_one_zone` where applicable
+    (``threshold``, ``temp_color``, ``outdoor_temp_var``). Uses ``datetime`` column
+    if present, otherwise the DataFrame index as X.
+
+    Returns
+    -------
+    bool
+        True if an outdoor trace was added (caller may need ``yaxis2`` on a single
+        ``go.Figure``, or ``secondary_y`` axes on subplots are updated separately).
+    """
+    if sp_col not in obs_data.columns:
+        raise ValueError(f"El DataFrame debe contener la columna '{sp_col}'.")
+    if temp_col not in obs_data.columns:
+        raise ValueError(f"El DataFrame debe contener la columna '{temp_col}'.")
+
+    x_series = _obs_x_values(obs_data)
+    temp = obs_data[temp_col].to_numpy()
+    sp = obs_data[sp_col].to_numpy()
+    x_vals = x_series.to_numpy()
+
+    sp_upper = sp + threshold
+    sp_lower = sp - threshold
+    in_comfort = (temp >= sp_lower) & (temp <= sp_upper)
+
+    trace_kwargs = {}
+    if row is not None and col is not None:
+        trace_kwargs = {"row": row, "col": col}
+
+    band_label = f"Setpoint ±{threshold:g}°C"
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=sp_upper,
+            mode="lines",
+            line=dict(width=0),
+            showlegend=False,
+            hoverinfo="skip",
+        ),
+        **trace_kwargs,
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=sp_lower,
+            mode="lines",
+            line=dict(width=0),
+            fillcolor="rgba(255, 165, 0, 0.2)",
+            fill="tonexty",
+            name=band_label if show_legend else None,
+            showlegend=show_legend,
+            hovertemplate="Setpoint band<extra></extra>",
+        ),
+        **trace_kwargs,
+    )
+
+    segments_in = []
+    segments_out = []
+    current_segment_in = {"x": [], "y": []}
+    current_segment_out = {"x": [], "y": []}
+
+    for i in range(len(temp)):
+        if in_comfort[i]:
+            current_segment_in["x"].append(x_vals[i])
+            current_segment_in["y"].append(temp[i])
+            if len(current_segment_out["x"]) > 0:
+                segments_out.append(current_segment_out.copy())
+                current_segment_out = {"x": [], "y": []}
+                current_segment_out["x"].append(x_vals[i])
+                current_segment_out["y"].append(temp[i])
+        else:
+            current_segment_out["x"].append(x_vals[i])
+            current_segment_out["y"].append(temp[i])
+            if len(current_segment_in["x"]) > 0:
+                segments_in.append(current_segment_in.copy())
+                current_segment_in = {"x": [], "y": []}
+                current_segment_in["x"].append(x_vals[i])
+                current_segment_in["y"].append(temp[i])
+
+    if len(current_segment_in["x"]) > 0:
+        segments_in.append(current_segment_in)
+    if len(current_segment_out["x"]) > 0:
+        segments_out.append(current_segment_out)
+
+    in_line_color = temp_color if temp_color is not None else "#1f77b4"
+
+    for i, seg in enumerate(segments_in):
+        fig.add_trace(
+            go.Scatter(
+                x=seg["x"],
+                y=seg["y"],
+                mode="lines",
+                name="Indoor temp (in comfort)" if (show_legend and i == 0) else None,
+                showlegend=(show_legend and i == 0),
+                line=dict(color=in_line_color, width=1.5),
+                hovertemplate="Indoor: %{y:.2f}°C<extra></extra>",
+                legendgroup="indoor_in",
+            ),
+            **trace_kwargs,
+        )
+
+    for i, seg in enumerate(segments_out):
+        fig.add_trace(
+            go.Scatter(
+                x=seg["x"],
+                y=seg["y"],
+                mode="lines",
+                name=(
+                    "Indoor temp (out of comfort)" if (show_legend and i == 0) else None
+                ),
+                showlegend=(show_legend and i == 0),
+                line=dict(color="#d62728", width=1.5),
+                hovertemplate="Indoor: %{y:.2f}°C (OUT OF COMFORT)<extra></extra>",
+                legendgroup="indoor_out",
+            ),
+            **trace_kwargs,
+        )
+
+    has_outdoor = (
+        outdoor_temp_var is not None and outdoor_temp_var in obs_data.columns
+    )
+    if has_outdoor:
+        outdoor = obs_data[outdoor_temp_var].to_numpy()
+        scatter_kwargs = dict(
+            x=x_vals,
+            y=outdoor,
+            mode="lines",
+            name="Outdoor temperature",
+            line=dict(color="gray", width=1.2, dash="dashdot"),
+            opacity=0.8,
+        )
+        if row is None and col is None:
+            scatter_kwargs["yaxis"] = "y2"
+            fig.add_trace(go.Scatter(**scatter_kwargs))
+        else:
+            fig.add_trace(
+                go.Scatter(**scatter_kwargs),
+                **trace_kwargs,
+                secondary_y=True,
+            )
+    return has_outdoor
+
+
+def _zone_output_slug(zone_name: str) -> str:
+    return "_".join(zone_name.lower().replace("-", " ").split())
+
+
+def _export_plotly_figure(
+    fig: go.Figure,
+    path_stem: Path,
+    export_format: Literal["html", "png"],
+    *,
+    png_width: int,
+    png_height: int,
+    png_scale: int = 2,
+) -> None:
+    """Write ``path_stem`` + ``.html`` or ``.png`` (requires kaleido for PNG)."""
+    path_stem = Path(path_stem)
+    path_stem.parent.mkdir(parents=True, exist_ok=True)
+    if export_format == "html":
+        fig.write_html(str(path_stem.with_suffix(".html")))
+        return
+    try:
+        fig.write_image(
+            str(path_stem.with_suffix(".png")),
+            width=png_width,
+            height=png_height,
+            scale=png_scale,
+        )
+    except Exception as e:
+        print(f"⚠️ No se pudo exportar PNG ({path_stem.name}): {e}")
+
+
+def plot_case_temperatures(
+    df: pd.DataFrame,
+    zones: Sequence[Tuple[str, str, str]],
+    output_dir: Path,
+    daily_date: pd.Timestamp,
+    case_id: int = 0,
+    summary_title: str = "",
+    threshold: float = 1.0,
+    temp_colors: Optional[Sequence[Optional[str]]] = None,
+    outdoor_temp_var: Optional[str] = "outdoor_temperature",
+    period_start: Optional[datetime] = None,
+    period_end: Optional[datetime] = None,
+    export_format: Literal["html", "png"] = "png",
+    png_width: int = 1200,
+    png_height_single: int = 500,
+    png_scale: int = 2,
+) -> None:
+    """Grid + per-zone time views: export as PNG (default) or interactive HTML.
+
+    Same data/comfort/outdoor conventions as :func:`plot_temperature_one_zone`.
+    ``zones`` is a sequence of ``(temp_var, setpoint_var, zone_name)`` per room.
+    ``df`` must include ``datetime`` and all columns referenced by ``zones`` (and
+    optionally ``outdoor_temp_var``).
+    """
+    if "datetime" not in df.columns:
+        raise ValueError("El DataFrame debe contener la columna 'datetime'.")
+
+    for temp_var, setpoint_var, _ in zones:
+        if setpoint_var not in df.columns:
+            raise ValueError(f"El DataFrame debe contener la columna '{setpoint_var}'.")
+        if temp_var not in df.columns:
+            raise ValueError(f"El DataFrame debe contener la columna '{temp_var}'.")
+
+    df_work = _ensure_datetime_unique(df.copy())
+
+    if period_start is None:
+        period_start = datetime(2026, 11, 15)
+    if period_end is None:
+        period_end = datetime(2027, 3, 15, 23, 55)
+    start_ts = pd.Timestamp(period_start)
+    end_ts = pd.Timestamp(period_end)
+    mask = (df_work["datetime"] >= start_ts) & (df_work["datetime"] <= end_ts)
+    obs = df_work.loc[mask].copy()
+
+    daily_date_norm = pd.Timestamp(daily_date).normalize()
+    daily_mask = obs["datetime"].dt.normalize() == daily_date_norm
+    obs_daily = obs.loc[daily_mask]
+
+    week_start = daily_date_norm
+    week_end = week_start + pd.Timedelta(days=6)
+    week_mask = (obs["datetime"] >= week_start) & (obs["datetime"] <= week_end)
+    obs_week = obs.loc[week_mask]
+
+    month_start = daily_date_norm.replace(day=1)
+    month_end = month_start + pd.offsets.MonthEnd(0)
+    month_mask = (obs["datetime"] >= month_start) & (obs["datetime"] <= month_end)
+    obs_month = obs.loc[month_mask]
+
+    n_zones = len(zones)
+    if n_zones == 0:
+        return
+
+    ncols = 2
+    nrows = (n_zones + ncols - 1) // ncols
+    n_cells = nrows * ncols
+    subplot_titles = [z[2] for z in zones] + [""] * (n_cells - n_zones)
+
+    has_outdoor = (
+        outdoor_temp_var is not None and outdoor_temp_var in obs.columns
+    )
+    specs = [
+        [{"secondary_y": bool(has_outdoor)} for _ in range(ncols)]
+        for _ in range(nrows)
+    ]
+    fig = sp.make_subplots(
+        rows=nrows,
+        cols=ncols,
+        subplot_titles=subplot_titles,
+        specs=specs,
+        vertical_spacing=0.12,
+        horizontal_spacing=0.1,
+    )
+
+    if temp_colors is None:
+        colors_seq: List[Optional[str]] = [None] * n_zones
+    else:
+        colors_seq = list(temp_colors)
+        if len(colors_seq) < n_zones:
+            colors_seq.extend([None] * (n_zones - len(colors_seq)))
+
+
+    for i, (temp_col, sp_col, _zone_title) in enumerate(zones):
+        row = (i // ncols) + 1
+        col = (i % ncols) + 1
+        add_temperature_traces(
+            fig,
+            obs,
+            temp_col,
+            sp_col,
+            show_legend=(i == 0),
+            row=row,
+            col=col,
+            threshold=threshold,
+            temp_color=colors_seq[i],
+            outdoor_temp_var=outdoor_temp_var,
+        )
+        fig.update_yaxes(title_text="Temperature (°C)", row=row, col=col, secondary_y=False)
+        if has_outdoor:
+            fig.update_yaxes(
+                title=dict(text="Outdoor (°C)", font=dict(color="gray")),
+                row=row,
+                col=col,
+                secondary_y=True,
+                showgrid=False,
+                tickfont=dict(color="gray"),
+            )
+
+    # Eje X: solo mes (sin año); mismo criterio en figuras sueltas más abajo.
+    _xaxis_month_only = dict(tickformat="%b")
+    fig.update_xaxes(**_xaxis_month_only)
+
+    grid_title = summary_title.strip() or f"case{case_id}"
+    grid_height = max(300 * nrows, 600)
+    fig.update_layout(
+        title=None,
+        height=grid_height,
+        template="plotly_white",
+        hovermode=False,
+        font=dict(family="Arial, sans-serif", size=20, color="black"),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+        ),
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _export_plotly_figure(
+        fig,
+        output_dir / f"case{case_id}_temperatures",
+        export_format,
+        png_width=png_width,
+        png_height=grid_height,
+        png_scale=png_scale,
+    )
+
+    for i, (temp_col, sp_col, room_title) in enumerate(zones):
+        room_slug = _zone_output_slug(room_title)
+        room_dir = output_dir / f"case{case_id}" / room_slug
+        room_dir.mkdir(parents=True, exist_ok=True)
+
+        fig_r = go.Figure()
+        added_out = add_temperature_traces(
+            fig_r,
+            obs,
+            temp_col,
+            sp_col,
+            show_legend=True,
+            threshold=threshold,
+            temp_color=colors_seq[i],
+            outdoor_temp_var=outdoor_temp_var,
+        )
+        layout_updates = dict(
+            title=f"{grid_title} – {room_title}",
+            yaxis_title="Temperature (°C)",
+            xaxis=_xaxis_month_only,
+            font=dict(family="Arial, sans-serif", size=20, color="black"),
+            template="plotly_white",
+            height=500,
+            hovermode=False,
+            #xaxis=dict(rangeslider=dict(visible=True), type="date"),
+        )
+        if added_out:
+            layout_updates["yaxis2"] = _outdoor_yaxis2_layout()
+        fig_r.update_layout(**layout_updates)
+
+        _export_plotly_figure(
+            fig_r,
+            room_dir / "temperature",
+            export_format,
+            png_width=png_width,
+            png_height=png_height_single,
+            png_scale=png_scale,
+        )
+
+        if not obs_daily.empty:
+            fig_d = go.Figure()
+            added_od = add_temperature_traces(
+                fig_d,
+                obs_daily,
+                temp_col,
+                sp_col,
+                show_legend=True,
+                threshold=threshold,
+                temp_color=colors_seq[i],
+                outdoor_temp_var=outdoor_temp_var,
+            )
+            ld = dict(
+                title=f"{grid_title} – {room_title} (daily: {daily_date.date()})",
+                yaxis_title="Temperature (°C)",
+                xaxis=_xaxis_month_only,
+                template="plotly_white",
+                font=dict(family="Arial, sans-serif", size=20, color="black"),
+                height=500,
+                hovermode=False,
+            )
+            if added_od:
+                ld["yaxis2"] = _outdoor_yaxis2_layout()
+            fig_d.update_layout(**ld)
+            _export_plotly_figure(
+                fig_d,
+                room_dir / "daily_temperature",
+                export_format,
+                png_width=png_width,
+                png_height=png_height_single,
+                png_scale=png_scale,
+            )
+
+        if not obs_week.empty:
+            fig_w = go.Figure()
+            added_ow = add_temperature_traces(
+                fig_w,
+                obs_week,
+                temp_col,
+                sp_col,
+                show_legend=True,
+                threshold=threshold,
+                temp_color=colors_seq[i],
+                outdoor_temp_var=outdoor_temp_var,
+            )
+            lw = dict(
+                title=(
+                    f"{grid_title} – {room_title} (weekly: "
+                    f"{week_start.date()} to {week_end.date()})"
+                ),
+                yaxis_title="Temperature (°C)",
+                xaxis=_xaxis_month_only,
+                template="plotly_white",
+                font=dict(family="Arial, sans-serif", size=20, color="black"),
+                height=500,
+                hovermode=False,
+            )
+            if added_ow:
+                lw["yaxis2"] = _outdoor_yaxis2_layout()
+            fig_w.update_layout(**lw)
+            _export_plotly_figure(
+                fig_w,
+                room_dir / "weekly_temperature",
+                export_format,
+                png_width=png_width,
+                png_height=png_height_single,
+                png_scale=png_scale,
+            )
+
+        if not obs_month.empty:
+            fig_m = go.Figure()
+            added_om = add_temperature_traces(
+                fig_m,
+                obs_month,
+                temp_col,
+                sp_col,
+                show_legend=True,
+                threshold=threshold,
+                temp_color=colors_seq[i],
+                outdoor_temp_var=outdoor_temp_var,
+            )
+            lm = dict(
+                title=(
+                    f"{grid_title} – {room_title} (monthly: "
+                    f"{month_start.date()} to {month_end.date()})"
+                ),
+                yaxis_title="Temperature (°C)",
+                xaxis=_xaxis_month_only,
+                template="plotly_white",
+                height=500,
+                hovermode=False,
+                font=dict(family="Arial, sans-serif", size=20, color="black"),
+                #xaxis=dict(rangeslider=dict(visible=True), type="date"),
+            )
+            if added_om:
+                lm["yaxis2"] = _outdoor_yaxis2_layout()
+            fig_m.update_layout(**lm)
+            _export_plotly_figure(
+                fig_m,
+                room_dir / "monthly_temperature",
+                export_format,
+                png_width=png_width,
+                png_height=png_height_single,
+                png_scale=png_scale,
+            )
