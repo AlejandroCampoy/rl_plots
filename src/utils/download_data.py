@@ -5,8 +5,8 @@ api = wandb.Api()
 
 # Variables que forman el path al run (formato: entity/project/run_id)
 ENTITY = "ai-uponor"
-PROJECT = "ai-smatrix-learning"
-RUN_ID = "c7rqx7hm"
+PROJECT = "smatrix-alcorcon-lab"
+RUN_ID = "y07e51pj"
 
 run = api.run(f"{ENTITY}/{PROJECT}/{RUN_ID}")
 
