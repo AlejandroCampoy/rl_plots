@@ -44,17 +44,17 @@ EXPERIMENTS = {
     'PPO': 'PPO/Eplus-PPO-radiant_case1_heating-Example_2026-03-16_13:32-res1',
     'TQC': 'TQC/Eplus-TQC-radiant_case1_heating-Example_2026-03-19_08:28-res1',
     'SAC': 'SAC/Eplus-SAC-radiant_case1_heating-Example_2026-03-16_13:42-res1',
-    'RecPPO': 'RecPPO/Eplus-RecurrentPPO-radiant_case1_heating-Example_2026-03-16_13:41-res1'
+    'RecPPO': 'RPO/Eplus-RecurrentPPO-radiant_case1_heating-Example_2026-03-16_13:41-res1'
 }
 
 # Progress del ENTRENAMIENTO (mean_reward por episodio). Rutas externas a DATA_DIR.
 # Solo se pinta la gráfica de training progress si aquí hay al menos una entrada.
 # Ej.: si solo SAC tiene log de entrenamiento en otra ruta: {'SAC': '/ruta/al/SAC/training/progress.csv'}
 TRAINING_PROGRESS_PATHS: dict[str, str] = {
-    'PPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/PPO/training/progress_ppo_case1.csv',
-    'TQC': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/TQC/training/progress_tqc_case1.csv',
-    'SAC': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/SAC/training/progress_sac_case1.csv',
-    'RecPPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/RecPPO/training/progress_rppo_case1.csv',
+    'PPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/PPO/training/progress.csv',
+    'TQC': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/TQC/training/progress.csv',
+    'SAC': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/SAC/training/progress.csv',
+    'RecPPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/RPO/training/progress.csv',
 }
 
 names_reference = []
