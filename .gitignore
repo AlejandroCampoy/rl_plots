@@ -65,3 +65,6 @@ htmlcov/
 
 # mypy
 .mypy_cache/
+
+# Docker compose overrides
+docker-compose.override.yml

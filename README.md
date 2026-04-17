@@ -76,4 +76,5 @@ Ver `requirements.txt` para la lista completa.
 
 - La carpeta `data/` está en `.gitignore`; los CSVs generados no se versionan.
 - En `docker-compose.yml` hay un volumen que monta una ruta local de datos (`LAB_EVALUATION`); puedes ajustarla o comentarla si no la usas.
+   - Si quieres personalizar el volumen en una ruta local específica puedes sobreescribirlo usando [docker-compose.override.yml](https://www.librechat.ai/docs/configuration/docker_override)
 - Para producción, configura un token o contraseña de Jupyter (variables en `docker-compose.yml` o en el `CMD` del Dockerfile).

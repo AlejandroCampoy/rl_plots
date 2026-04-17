@@ -44,7 +44,7 @@ EXPERIMENTS = {
     'PPO': 'PPO/Eplus-PPO-radiant_case1_heating-Example_2026-03-16_13:32-res1',
     'TQC': 'TQC/Eplus-TQC-radiant_case1_heating-Example_2026-03-19_08:28-res1',
     'SAC': 'SAC/Eplus-SAC-radiant_case1_heating-Example_2026-03-16_13:42-res1',
-    'RecPPO': 'RecPPO/Eplus-RecurrentPPO-radiant_case1_heating-Example_2026-03-16_13:41-res1'
+    'RecPPO': 'RPO/Eplus-RecurrentPPO-radiant_case1_heating-Example_2026-03-16_13:41-res1'
 }
 
 # Progress del ENTRENAMIENTO (mean_reward por episodio). Rutas externas a DATA_DIR.
@@ -54,7 +54,7 @@ TRAINING_PROGRESS_PATHS: dict[str, str] = {
     'PPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/PPO/training/progress.csv',
     'TQC': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/TQC/training/progress.csv',
     'SAC': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/SAC/training/progress.csv',
-    'RecPPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/RecPPO/training/progress.csv',
+    'RecPPO': '/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso_y_model/caso1/RPO/training/progress.csv',
 }
 
 names_reference = []
