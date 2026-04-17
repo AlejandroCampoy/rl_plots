@@ -20,13 +20,13 @@ from utils.plot_functions.plot_functions import (
     plot_control,
     plot_dfs_boxplot,
     plot_dfs_line,
-    plot_dfs_line_grouped_by_month,
+    plot_dfs_bar_grouped_by_month,
     plot_energy_savings,
     plot_episode_reward_terms_timestep,
     plot_heat_work,
     plot_mean_energy_savings,
     plot_smoothed_signal,
-    plot_temperature_one_zone,
+    plot_case_temperatures,
     plot_training_reward_terms_progression,
     safe_read_csv,
     save_figure,
@@ -61,6 +61,11 @@ names_comparison = [
 combination_size = len(names_reference) * len(names_comparison)
 
 FILTER_INTERVAL = ('2006-11-01 00:00:00', '2007-03-31 23:55:00')
+# Día de referencia para la vista diaria en plot_case_temperatures (mitad del intervalo simulado).
+ZONE_TEMP_PLOT_DAILY_DATE = (
+    pd.Timestamp(FILTER_INTERVAL[0])
+    + (pd.Timestamp(FILTER_INTERVAL[1]) - pd.Timestamp(FILTER_INTERVAL[0])) / 2
+).normalize()
 TEMPERATURE_THRESHOLD = 1.0
 SMOOTH_WINDOW = 1
 
@@ -112,7 +117,7 @@ pio.defaults.default_scale = 2
 # CONFIG — VARIABLES (zonas, columnas, umbrales, colores)
 # =============================================================================
 zone_names = [
-    'Living',    
+    'Living Room',    
     'Bathroom',
     'Bedroom1',
     'Bedroom2',
@@ -288,42 +293,38 @@ if training_progress:
         variable_name='mean_reward',
         colors=colors[:_n],
     )
-    fig.update_layout(title=None, xaxis_title='Episode', yaxis_title='Mean Reward')
+    fig.update_layout(title=None, xaxis_title='Episode', yaxis_title='Mean reward')
     save_figure(
         fig, OUTPUT_PROGRESS / 'training_progress', width=1200, height=700, scale=2
     )
 
 # =============================================================================
-# FIGURES — Temperaturas por zona (una gráfica por zona y por experimento)
+# FIGURES — Temperaturas (plot_case_temperatures: rejilla + por habitación y recortes)
 # =============================================================================
 
+_zones = list(
+    zip(temperature_variables, setpoint_variables, zone_names, strict=True)
+)
 for key, df in unified.items():
     model_dir = OUTPUT_ZONE_TEMPERATURES / _slugify(key)
-    model_dir.mkdir(parents=True, exist_ok=True)
-    for i, zone_name in enumerate(zone_names):
-        fig = plot_temperature_one_zone(
-            df=df,
-            temp_var=temperature_variables[i],
-            setpoint_var=setpoint_variables[i],
-            zone_name=zone_name,
-            threshold=TEMPERATURE_THRESHOLD,
-            temp_color=colors[i % len(colors)],
-        )
-        zone_slug = (
-            temperature_variables[i].replace('air_temperature_', '').replace('-', '_')
-        )
-        fig.update_layout(
-            title=None,
-            xaxis_title='Date',
-            yaxis_title='Temperature (°C)',
-        )
-        save_figure(
-            fig,
-            model_dir / f'zone_{zone_slug}',
-            width=1200,
-            height=500,
-            scale=2,
-        )
+    _kwargs = dict(
+        df=df,
+        zones=_zones,
+        output_dir=model_dir,
+        daily_date=ZONE_TEMP_PLOT_DAILY_DATE,
+        case_id=0,
+        summary_title=key,
+        threshold=TEMPERATURE_THRESHOLD,
+        outdoor_temp_var=None,
+        png_width=1200,
+        png_height_single=500,
+        png_scale=2,
+        temp_colors=['#1ABC9C', '#1ABC9C', '#1ABC9C', '#1ABC9C', '#1ABC9C']
+    )
+    if FILTER_INTERVAL is not None:
+        _kwargs['period_start'] = pd.Timestamp(FILTER_INTERVAL[0]).to_pydatetime()
+        _kwargs['period_end'] = pd.Timestamp(FILTER_INTERVAL[1]).to_pydatetime()
+    plot_case_temperatures(**_kwargs)
 
 # =============================================================================
 # FIGURES — Temperature vs flow (control)
@@ -364,6 +365,9 @@ for key, df in unified.items():
             )
             continue
 
+        _y_title = _slugify(var).replace('_', ' ').capitalize()
+        if var == water_temperature_variable:
+            _y_title = f'{_y_title} ( ºC)'
         fig = plot_smoothed_signal(
             df=df,
             variable=var,
@@ -371,7 +375,7 @@ for key, df in unified.items():
             window=SMOOTH_WINDOW,
             color=colors[i % len(colors)],
             title=None,
-            yaxis_title=var,
+            yaxis_title=_y_title
         )
         save_figure(
             fig,
@@ -429,7 +433,7 @@ fig = plot_bar(mean_temp_violation_dict, bar_colors=colors[:df_num])
 fig.update_layout(
     title=None,
     xaxis_title='Model',
-    yaxis_title='Mean Temperature Violation (ºC)',
+    yaxis_title='Mean episodic temperature violation (ºC)',
 )
 save_figure(
     fig, OUTPUT_MEANS_GENERAL / 'mean_temp_violations', width=1200, height=600, scale=2
@@ -439,7 +443,7 @@ fig = plot_bar(mean_energy_consumption_dict, bar_colors=colors[:df_num])
 fig.update_layout(
     title=None,
     xaxis_title='Model',
-    yaxis_title='Mean power consumption (W)',
+    yaxis_title='Mean episodic power consumption (W)',
 )
 save_figure(
     fig, OUTPUT_MEANS_GENERAL / 'mean_power_demand', width=1200, height=600, scale=2
@@ -450,7 +454,7 @@ fig = plot_dfs_bar_grouped_by_month(
     energy_variable,
     colors=colors[:df_num],
 )
-fig.update_layout(title=None, xaxis_title='Date', yaxis_title='Power demand (W)')
+fig.update_layout(title=None, xaxis_title='Date', yaxis_title='Mean episodic power demand (W)')
 save_figure(
     fig, OUTPUT_MEANS_MONTH / 'month_power_demand', width=1200, height=600, scale=2
 )
@@ -460,7 +464,7 @@ fig = plot_dfs_bar_grouped_by_month(
     'total_temperature_violation',
     colors=colors[:df_num],
 )
-fig.update_layout(title=None, xaxis_title='Date', yaxis_title='Temperature violation (°C)')
+fig.update_layout(title=None, xaxis_title='Date', yaxis_title='Mean episodic temperature violation (°C)')
 save_figure(
     fig,
     OUTPUT_MEANS_MONTH / 'month_temperature_violation',
@@ -609,7 +613,7 @@ else:
         evaluation_progress,
         'comfort_violation_time(%)',
         colors=colors[:df_num],
-        yaxis_title='Comfort violation time (%)',
+        yaxis_title='Episodic comfort violation time (%)',
         xaxis_title='Model'
     )
     save_figure(
@@ -627,7 +631,7 @@ else:
     )
     fig.update_layout(
         title=None,
-        yaxis_title='Mean Episodic Temperature violation (ºC)',
+        yaxis_title='Episodic temperature violation (ºC)',
         xaxis_title='Model'
     )
     save_figure(
@@ -642,7 +646,7 @@ else:
         evaluation_progress,
         'mean_power_demand',
         colors=colors[:df_num],
-        yaxis_title='Power demand (W)',
+        yaxis_title='Episodic power demand (W)',
         xaxis_title='Model'
     )
     fig.update_layout(title=None, yaxis_title='Power demand (W)')
