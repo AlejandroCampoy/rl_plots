@@ -469,6 +469,30 @@ def plot_control(
             )
         )
 
+    # Eje Y temperatura: rango a partir de lecturas plausibles (evita picos sensor / datos erróneos)
+    _temp_y_parts: list[pd.Series] = []
+    for var in temperature_variables:
+        if var not in df.columns:
+            continue
+        t_ok = _plausible_indoor_air_c(df[var])
+        _temp_y_parts.append(t_ok if not t_ok.empty else df[var].astype(float).dropna())
+    if outdoor_temp_var is not None and outdoor_temp_var in df.columns:
+        o_ok = _plausible_indoor_air_c(df[outdoor_temp_var])
+        _temp_y_parts.append(
+            o_ok if not o_ok.empty else df[outdoor_temp_var].astype(float).dropna()
+        )
+    yaxis_primary: dict = dict(title='Temperature (°C)', side='left')
+    if _temp_y_parts:
+        merged_t = pd.concat(_temp_y_parts, ignore_index=True)
+        arr_t = merged_t.to_numpy(dtype=float)
+        arr_t = arr_t[np.isfinite(arr_t)]
+        if arr_t.size > 0:
+            _pad = 0.5
+            _lo = float(np.nanmin(arr_t)) - _pad
+            _hi = float(np.nanmax(arr_t)) + _pad
+            if math.isfinite(_lo) and math.isfinite(_hi) and _hi > _lo:
+                yaxis_primary['range'] = [_lo, _hi]
+
     # Configurar ejes: X con datetime explícito
     fig.update_layout(
         xaxis=dict(
@@ -476,7 +500,7 @@ def plot_control(
             type='date',
             **_DATETIME_X_AXIS_FORMAT,
         ),
-        yaxis=dict(title='Temperature (°C)', side='left'),
+        yaxis=yaxis_primary,
         yaxis2=dict(title='Flow rate', overlaying='y', side='right', showgrid=False),
         font=dict(family="Arial, sans-serif", size=16, color="black"),
         legend=dict(
@@ -1902,6 +1926,56 @@ def _outdoor_yaxis2_layout():
     )
 
 
+def _plausible_indoor_air_c(series: pd.Series, *, lo_c: float = 5.0, hi_c: float = 45.0) -> pd.Series:
+    """Filtra lecturas de temperatura/setpoint interior claramente fuera de rango (spikes)."""
+    s = series.astype(float)
+    return s[(s >= lo_c) & (s <= hi_c)]
+
+
+def _indoor_temperature_y_range(
+    obs_data: pd.DataFrame,
+    temp_col: str,
+    sp_col: str,
+    threshold: float,
+    *,
+    pad_c: float = 0.5,
+) -> tuple[float, float]:
+    """Rango del eje Y (°C) a partir de temperatura interior, setpoint y banda.
+
+    Ignora valores fuera de un rango físico razonable para aire interior (p. ej.
+    picos erróneos del sensor o unidades mal interpretadas) al calcular min/max,
+    para no aplastar la escala del eje.
+    """
+    if obs_data.empty or temp_col not in obs_data.columns or sp_col not in obs_data.columns:
+        return (15.0, 28.0)
+    t = obs_data[temp_col].astype(float)
+    s = obs_data[sp_col].astype(float)
+    t_ok = _plausible_indoor_air_c(t)
+    s_ok = _plausible_indoor_air_c(s)
+    if t_ok.empty:
+        t_ok = t.dropna()
+    if s_ok.empty:
+        s_ok = s.dropna()
+    vals = pd.concat(
+        [t_ok, s_ok, s_ok + threshold, s_ok - threshold],
+        ignore_index=True,
+    )
+    arr = vals.to_numpy(dtype=float)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return (15.0, 28.0)
+    lo = float(np.nanmin(arr))
+    hi = float(np.nanmax(arr))
+    if not math.isfinite(lo) or not math.isfinite(hi):
+        return (15.0, 28.0)
+    lo -= pad_c
+    hi += pad_c
+    if hi <= lo:
+        lo -= 1.0
+        hi += 1.0
+    return (lo, hi)
+
+
 def add_temperature_traces(
     fig,
     obs_data,
@@ -2046,6 +2120,8 @@ def add_temperature_traces(
             name="Outdoor temperature",
             line=dict(color="gray", width=1.2, dash="dashdot"),
             opacity=0.8,
+            showlegend=show_legend,
+            legendgroup="outdoor",
         )
         if row is None and col is None:
             scatter_kwargs["yaxis"] = "y2"
@@ -2195,7 +2271,14 @@ def plot_case_temperatures(
             temp_color=colors_seq[i],
             outdoor_temp_var=outdoor_temp_var,
         )
-        fig.update_yaxes(title_text="Temperature (°C)", row=row, col=col, secondary_y=False)
+        y_lo, y_hi = _indoor_temperature_y_range(obs, temp_col, sp_col, threshold)
+        fig.update_yaxes(
+            title_text="Temperature (°C)",
+            row=row,
+            col=col,
+            secondary_y=False,
+            range=[y_lo, y_hi],
+        )
         if has_outdoor:
             fig.update_yaxes(
                 title=dict(text="Outdoor (°C)", font=dict(color="gray")),
@@ -2266,6 +2349,9 @@ def plot_case_temperatures(
         if added_out:
             layout_updates["yaxis2"] = _outdoor_yaxis2_layout()
         fig_r.update_layout(**layout_updates)
+        _yr0, _yr1 = _indoor_temperature_y_range(obs, temp_col, sp_col, threshold)
+        # go.Figure() sin make_subplots: no usar update_yaxes(..., secondary_y=...).
+        fig_r.update_layout(yaxis=dict(range=[_yr0, _yr1]))
 
         _export_plotly_figure(
             fig_r,
@@ -2300,6 +2386,10 @@ def plot_case_temperatures(
             if added_od:
                 ld["yaxis2"] = _outdoor_yaxis2_layout()
             fig_d.update_layout(**ld)
+            _yd0, _yd1 = _indoor_temperature_y_range(
+                obs_daily, temp_col, sp_col, threshold
+            )
+            fig_d.update_layout(yaxis=dict(range=[_yd0, _yd1]))
             _export_plotly_figure(
                 fig_d,
                 room_dir / "daily_temperature",
@@ -2336,6 +2426,10 @@ def plot_case_temperatures(
             if added_ow:
                 lw["yaxis2"] = _outdoor_yaxis2_layout()
             fig_w.update_layout(**lw)
+            _yw0, _yw1 = _indoor_temperature_y_range(
+                obs_week, temp_col, sp_col, threshold
+            )
+            fig_w.update_layout(yaxis=dict(range=[_yw0, _yw1]))
             _export_plotly_figure(
                 fig_w,
                 room_dir / "weekly_temperature",
@@ -2373,6 +2467,10 @@ def plot_case_temperatures(
             if added_om:
                 lm["yaxis2"] = _outdoor_yaxis2_layout()
             fig_m.update_layout(**lm)
+            _ym0, _ym1 = _indoor_temperature_y_range(
+                obs_month, temp_col, sp_col, threshold
+            )
+            fig_m.update_layout(yaxis=dict(range=[_ym0, _ym1]))
             _export_plotly_figure(
                 fig_m,
                 room_dir / "monthly_temperature",
