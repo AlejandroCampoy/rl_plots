@@ -81,9 +81,12 @@ def save_figure(fig, path_stem, width=1200, height=700, scale=2):
     """
     Guarda la figura en PNG (alta calidad) y HTML.
     path_stem: Path o str sin extensión (ej. output_dir / 'nombre').
+    ``width``/``height`` se aplican también a ``layout`` para que el HTML y el PNG
+    (Kaleido) compartan la misma geometría y no diverjan márgenes o ejes.
     """
     path_stem = Path(path_stem)
     path_stem.parent.mkdir(parents=True, exist_ok=True)
+    fig.update_layout(width=width, height=height, **PLOTLY_WHITE_LAYOUT_KWARGS)
     try:
         fig.write_image(
             str(path_stem.with_suffix('.png')),
@@ -2239,8 +2242,11 @@ def plot_case_temperatures(
 
     grid_title = summary_title.strip() or f"case{case_id}"
     grid_height = max(300 * nrows, 600)
+    # width/height en layout: Kaleido usa las mismas dimensiones que write_image;
+    # si solo se pasan a write_image, la anotación del eje Y puede solaparse con los ticks.
     fig.update_layout(
         title=None,
+        width=png_width,
         height=grid_height,
         template="plotly_white",
         hovermode=False,
