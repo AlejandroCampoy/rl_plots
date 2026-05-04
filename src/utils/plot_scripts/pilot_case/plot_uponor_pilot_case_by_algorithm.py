@@ -130,9 +130,9 @@ pio.defaults.default_scale = 2
 zone_names = [
     'Living Room',    
     'Bathroom',
-    'Bedroom1',
-    'Bedroom2',
-    'Bedroom3',
+    'Bedroom 1',
+    'Bedroom 2',
+    'Bedroom 3',
 ]
 temperature_variables = [
     "air_temperature_living",
@@ -428,6 +428,15 @@ for key, df in unified.items():
         outlet_name='Heat source outlet temperature',
         title=None,
     )
+    fig.update_layout(
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='center',
+            x=0.5,
+        ),
+    )
     save_figure(
         fig,
         model_dir / 'heat_work_requested_vs_outlet_temperature',
@@ -465,7 +474,7 @@ fig = plot_dfs_bar_grouped_by_month(
     energy_variable,
     colors=colors[:df_num],
 )
-fig.update_layout(title=None, xaxis_title='Date', yaxis_title='Mean episodic power demand (W)')
+fig.update_layout(title=None, xaxis_title='', yaxis_title='Mean episodic power demand (W)')
 save_figure(
     fig, OUTPUT_MEANS_MONTH / 'month_power_demand', width=1200, height=600, scale=2
 )
@@ -475,7 +484,7 @@ fig = plot_dfs_bar_grouped_by_month(
     'total_temperature_violation',
     colors=colors[:df_num],
 )
-fig.update_layout(title=None, xaxis_title='Date', yaxis_title='Mean episodic temperature violation (°C)')
+fig.update_layout(title=None, xaxis_title='', yaxis_title='Mean episodic temperature violation (°C)')
 save_figure(
     fig,
     OUTPUT_MEANS_MONTH / 'month_temperature_violation',
@@ -625,7 +634,7 @@ else:
         'comfort_violation_time(%)',
         colors=colors[:df_num],
         yaxis_title='Episodic comfort violation time (%)',
-        xaxis_title='Model'
+        xaxis_title=''
     )
     save_figure(
         fig,
@@ -643,7 +652,7 @@ else:
     fig.update_layout(
         title=None,
         yaxis_title='Episodic temperature violation (ºC)',
-        xaxis_title='Model'
+        xaxis_title=''
     )
     save_figure(
         fig,
@@ -658,7 +667,7 @@ else:
         'mean_power_demand',
         colors=colors[:df_num],
         yaxis_title='Episodic power demand (W)',
-        xaxis_title='Model'
+        xaxis_title=''
     )
     fig.update_layout(title=None, yaxis_title='Power demand (W)')
     save_figure(

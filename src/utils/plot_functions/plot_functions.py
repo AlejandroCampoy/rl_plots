@@ -390,7 +390,7 @@ def plot_episode_reward_terms_timestep(
     )
     fig.update_layout(
         title=title,
-        xaxis_title='Time',
+        xaxis_title='',
         yaxis_title='Reward term (per timestep)',
         template='plotly_white',
         legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5),
@@ -517,14 +517,14 @@ def plot_control(
         ),
         yaxis=yaxis_primary,
         yaxis2=dict(title='Flow rate', overlaying='y', side='right', showgrid=False),
-        font=dict(family="Arial, sans-serif", size=16, color="black"),
+        font=dict(family="Arial, sans-serif", size=20, color="black"),
         legend=dict(
             orientation="v",
             yanchor="middle",
             y=0.5,
             xanchor="left",
             x=1.05,
-            font=dict(size=14),
+            font=dict(size=20),
         ),
         width=1000,
         height=600,
@@ -833,7 +833,7 @@ def plot_temperatures(
             x=1.05,
             font=dict(size=20),
         ),
-        font=dict(family="Arial, sans-serif", size=16, color="black"),
+        font=dict(family="Arial, sans-serif", size=20, color="black"),
         width=1000,
         height=600,
         **PLOTLY_WHITE_LAYOUT_KWARGS,
@@ -948,9 +948,9 @@ def plot_temperature_one_zone(
             y=1.02,
             xanchor='center',
             x=0.5,
-            font=dict(size=14),
+            font=dict(size=20),
         ),
-        font=dict(family='Arial, sans-serif', size=14, color='black'),
+        font=dict(family='Arial, sans-serif', size=20, color='black'),
         width=1000,
         height=500,
     )
@@ -1069,7 +1069,7 @@ def plot_temperatures_subplots(
         height=250 * nrows,
         width=1000,
         showlegend=False,
-        font=dict(family="Arial, sans-serif", size=12, color="black"),
+        font=dict(family="Arial, sans-serif", size=20, color="black"),
         **PLOTLY_WHITE_LAYOUT_KWARGS,
     )
     fig.update_yaxes(title_text="Temperature (°C)", row="all", col=1)
@@ -1676,7 +1676,7 @@ def plot_action_distribution(df_dict, variable, colors=None):
     layout_kwargs = dict(
         **PLOTLY_WHITE_LAYOUT_KWARGS,
         title=f'{variable} distribution',
-        xaxis_title='Model',
+        xaxis_title='',
         yaxis_title=_variable_name_to_axis_label(variable),
         violinmode='overlay',
         font=dict(family="Arial, sans-serif", size=20, color="black"),
@@ -2303,7 +2303,7 @@ def plot_case_temperatures(
         )
         y_lo, y_hi = _indoor_temperature_y_range(obs, temp_col, sp_col, threshold)
         fig.update_yaxes(
-            title_text="Temperature (°C)",
+            title_text="",
             row=row,
             col=col,
             secondary_y=False,
@@ -2354,7 +2354,7 @@ def plot_case_temperatures(
         yanchor="middle",
         textangle=-90,
         showarrow=False,
-        font=dict(family="Arial, sans-serif", size=20, color="black"),
+        font=dict(family="Arial, sans-serif", size=24, color="black"),
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
