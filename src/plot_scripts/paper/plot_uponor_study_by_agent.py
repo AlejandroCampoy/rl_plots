@@ -226,6 +226,13 @@ def _build_multistudy_progress_grid(
         horizontal_spacing=0.012,
     )
 
+    fig.update_annotations(font=dict(
+            family=_PLOTLY_SERIF,
+            size=PLOTLY_PAPER_AXIS_TITLE_SIZE,
+            color=_PLOTLY_TEXT,
+        )
+    )
+
     y_parts: List[np.ndarray] = []
     for col, (cfg, tp) in enumerate(payload, start=1):
         fig_study = plot_dfs_line(
@@ -235,7 +242,7 @@ def _build_multistudy_progress_grid(
         )
         for tr in fig_study.data:
             tr_copy = go.Scatter(**tr.to_plotly_json())
-            tr_copy.showlegend = bool(col == 1 and tr_copy.showlegend)
+            tr_copy.showlegend = (col == 1)
             fig.add_trace(tr_copy, row=1, col=col)
             y_ser = pd.to_numeric(pd.Series(tr_copy.y), errors='coerce').dropna()
             y_arr = y_ser.to_numpy(dtype='float64')
@@ -266,7 +273,7 @@ def _build_multistudy_progress_grid(
         legend=dict(
             orientation='h',
             yanchor='bottom',
-            y=1.02,
+            y=1.12,
             xanchor='center',
             x=0.5,
             font=dict(
@@ -280,7 +287,7 @@ def _build_multistudy_progress_grid(
             size=PLOTLY_PAPER_FONT_SIZE,
             color=_PLOTLY_TEXT,
         ),
-        margin=dict(l=88, r=10, t=92, b=58),
+        margin=dict(l=88, r=10, t=92, b=85),
         width=max(520 * n, 1100),
         height=500,
     )
@@ -289,7 +296,7 @@ def _build_multistudy_progress_grid(
         xref='paper',
         yref='paper',
         x=0.5,
-        y=-0.06,
+        y=-0.14,
         xanchor='center',
         yanchor='top',
         showarrow=False,
@@ -329,6 +336,13 @@ def _build_multistudy_comfort_power_grid(
         subplot_titles=[cfg.study_label for cfg, _ in payload] + [''] * n,
         horizontal_spacing=0.012,
         vertical_spacing=0.11,
+    )
+
+    fig.update_annotations(font=dict(
+            family=_PLOTLY_SERIF,
+            size=PLOTLY_PAPER_AXIS_TITLE_SIZE,
+            color=_PLOTLY_TEXT,
+        )
     )
 
     comfort_vals: List[np.ndarray] = []

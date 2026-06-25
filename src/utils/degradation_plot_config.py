@@ -129,7 +129,7 @@ class DegradationPlotConfig:
 
 DEFAULT_DEGRADATION_PLOT_CONFIG = DegradationPlotConfig(
     study_label="pilot_degradation",
-    original_label="Original (TQC)",
+    original_label="Default",
     original_eval_dir=Path(
         "/home/jovyan/work/data/paper/data/pilot_study/eval_por_caso/"
         "Eval-DRL-Baseline-2026-cases/caso2/"
