@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     git \
+    openssh-client \
     libasound2 \
     libatk-bridge2.0-0 \
     libcairo2 \

@@ -13,10 +13,13 @@ services:
       - .:/home/jovyan/work
       # Datos externos (opcional; sobrescribe ./data del repo en esta ruta)
       - /Users/david_mac/Documents/LAB_EVALUATION:/home/jovyan/work/data
+      # Forward del SSH agent del host (para autenticación Git por SSH)
+      - ${SSH_AUTH_SOCK}:/run/host/ssh-agent.sock
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - GRANT_SUDO=yes
       - PYTHONPATH=/home/jovyan/work/src
+      - SSH_AUTH_SOCK=/run/host/ssh-agent.sock
       # Uncomment to set a specific token or password
       # - JUPYTER_TOKEN=your_token_here
       # - JUPYTER_PASSWORD=your_password_here
