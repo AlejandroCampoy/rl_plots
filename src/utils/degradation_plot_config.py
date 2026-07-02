@@ -44,13 +44,13 @@ class DegradationPlotConfig:
     episode_dir: str = "episode-20"
     general_plots_dirname: str = "general"
     summary_plots_dirname: str = "summary"
-    # Color Tab10[0] (misma paleta que ``study_plot_config`` / scripts piloto).
-    baseline_box_color: str = TAB10[0]
-    degradation_box_color: str = DEGRADATION_GRAY_MATPLOTLIB_06
+    # Color Tab10[1] (TQC orange) — alineado con el color del agente TQC.
+    baseline_box_color: str = TAB10[1]
+    degradation_box_color: str = TAB10[1]
     # Umbral banda confort / trazas de temperatura (como ``StudyPlotConfig`` / Uponor).
     temperature_threshold: float = 1.0
     # Color de la línea interior en ``plot_case_temperatures`` (Tab10[0] por defecto).
-    temp_zone_line_color: str = TAB10[0]
+    temp_zone_line_color: str = TAB10[1]
     datetime_base_year: int = 2026
     simulation_window_start: str = "2026-11-15"
     simulation_window_end: str = "2027-03-15 23:55"
