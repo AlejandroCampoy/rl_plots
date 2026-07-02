@@ -230,8 +230,7 @@ def _build_multistudy_progress_grid(
             family=_PLOTLY_SERIF,
             size=PLOTLY_PAPER_AXIS_TITLE_SIZE,
             color=_PLOTLY_TEXT,
-        )
-    )
+        ),)
 
     y_parts: List[np.ndarray] = []
     for col, (cfg, tp) in enumerate(payload, start=1):
@@ -342,8 +341,7 @@ def _build_multistudy_comfort_power_grid(
             family=_PLOTLY_SERIF,
             size=PLOTLY_PAPER_AXIS_TITLE_SIZE,
             color=_PLOTLY_TEXT,
-        )
-    )
+    ),)
 
     comfort_vals: List[np.ndarray] = []
     power_vals: List[np.ndarray] = []
@@ -458,14 +456,14 @@ def _build_multistudy_comfort_power_grid(
         color=_PLOTLY_TEXT,
     )
     fig.update_yaxes(
-        title_text='Mean episodic comfort violation (ºC)',
+        title_text='Mean episodic comfort <br> violation (ºC)',
         title_font=_title_font,
         title_standoff=10,
         row=1,
         col=1,
     )
     fig.update_yaxes(
-        title_text='Mean episodic power demand (W)',
+        title_text='Mean episodic power <br> demand (W)',
         title_font=_title_font,
         title_standoff=10,
         row=2,
@@ -691,7 +689,7 @@ def run_study_plots(
             if filter_interval is not None:
                 _kwargs['period_start'] = pd.Timestamp(filter_interval[0]).to_pydatetime()
                 _kwargs['period_end'] = pd.Timestamp(filter_interval[1]).to_pydatetime()
-            plot_case_temperatures(**_kwargs, export_zone_subfolders=True)
+            plot_case_temperatures(**_kwargs, export_zone_subfolders=False)
 
     # =============================================================================
     # FIGURES — Temperature vs flow (control)
