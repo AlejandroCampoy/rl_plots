@@ -49,7 +49,7 @@ PLOTLY_PAPER_FONT_SIZE = 25
 PLOTLY_PAPER_TICK_SIZE = 24
 PLOTLY_PAPER_AXIS_TITLE_SIZE = 25
 PLOTLY_PAPER_TITLE_SIZE = 27
-PLOTLY_PAPER_LEGEND_SIZE = 24
+PLOTLY_PAPER_LEGEND_SIZE = 18
 
 # make_subplots: menos hueco entre paneles (Plotly no tiene tight_layout; dominios normalizados 0–1).
 PLOTLY_SUBPLOT_VERTICAL_SPACING = 0.06
@@ -2628,12 +2628,12 @@ def _xaxis_layout_for_datetime_span(dt: pd.Series) -> dict:
         out["dtick"] = 2 * 3600 * 1000
     elif days <= 14:
         # Corto: día + mes (+ año 2 dígitos si cruza año); sin inclinación.
-        out["tickformat"] = "%a %d %b %y" if cross_year else "%a %d %b"
+        out["tickformat"] = "%a %d %b" if cross_year else "%a %d %b"
     elif days <= 120:
-        out["tickformat"] = "%d %b %y" if cross_year else "%d %b"
+        out["tickformat"] = "%d %b" if cross_year else "%d %b"
     else:
         # Span largo: día + mes + año corto (único por tick sin repetir solo mes/año).
-        out["tickformat"] = "%d %b %y"
+        out["tickformat"] = "%d %b"
 
     return out
 
@@ -2844,7 +2844,7 @@ def plot_case_temperatures(
 
     ann_font = dict(
         family=_PLOTLY_SERIF,
-        size=PLOTLY_PAPER_AXIS_TITLE_SIZE,
+        size=PLOTLY_PAPER_AXIS_TITLE_SIZE-4,
         color=_PLOTLY_TEXT,
     )
     # Títulos alineados a la izquierda, fuera del área de datos: ancla inferior en el borde
@@ -2859,7 +2859,7 @@ def plot_case_temperatures(
             y=1,
             xanchor='left',
             yanchor='bottom',
-            yshift=6,
+            yshift=1,
             text=room_title,
             showarrow=False,
             font=ann_font,
@@ -2897,7 +2897,7 @@ def plot_case_temperatures(
         hovermode=False,
         font=dict(
             family=_PLOTLY_SERIF,
-            size=PLOTLY_PAPER_FONT_SIZE,
+            size=PLOTLY_PAPER_FONT_SIZE-5,
             color=_PLOTLY_TEXT,
         ),
         legend=dict(
@@ -2906,6 +2906,8 @@ def plot_case_temperatures(
             y=1.02,
             xanchor="center",
             x=0.5,
+            itemwidth=30,
+            tracegroupgap=5,
             font=dict(
                 family=_PLOTLY_SERIF,
                 size=PLOTLY_PAPER_LEGEND_SIZE,
@@ -2927,7 +2929,7 @@ def plot_case_temperatures(
         showarrow=False,
         font=dict(
             family=_PLOTLY_SERIF,
-            size=PLOTLY_PAPER_AXIS_TITLE_SIZE + 2,
+            size=PLOTLY_PAPER_AXIS_TITLE_SIZE,
             color=_PLOTLY_TEXT,
         ),
     )
@@ -3018,7 +3020,7 @@ def plot_case_temperatures(
                 template="plotly_white",
                 font=dict(
                 family=_PLOTLY_SERIF,
-                size=PLOTLY_PAPER_FONT_SIZE,
+                size=PLOTLY_PAPER_FONT_SIZE -10,
                 color=_PLOTLY_TEXT,
             ),
                 height=500,
@@ -3063,7 +3065,7 @@ def plot_case_temperatures(
                 template="plotly_white",
                 font=dict(
                 family=_PLOTLY_SERIF,
-                size=PLOTLY_PAPER_FONT_SIZE,
+                size=PLOTLY_PAPER_FONT_SIZE -10,
                 color=_PLOTLY_TEXT,
             ),
                 height=500,
@@ -3110,7 +3112,7 @@ def plot_case_temperatures(
                 hovermode=False,
                 font=dict(
                 family=_PLOTLY_SERIF,
-                size=PLOTLY_PAPER_FONT_SIZE,
+                size=PLOTLY_PAPER_FONT_SIZE - 10,
                 color=_PLOTLY_TEXT,
             ),
                 #xaxis=dict(rangeslider=dict(visible=True), type="date"),
