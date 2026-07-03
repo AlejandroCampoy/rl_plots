@@ -30,6 +30,8 @@ from utils.plot_functions.plot_functions import (
     save_figure,
 )
 
+from utils.study_plot_config import TAB10
+
 # =============================================================================
 # CONFIG — SIM2REAL HISTORY (único CSV tipo monitor / Ray)
 # =============================================================================
@@ -38,7 +40,7 @@ from utils.plot_functions.plot_functions import (
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 HISTORY_CSV = REPO_ROOT / (
-    'data/paper/data/case_study/sim2real/'
+    'work/data/paper/data/case_study/sim2real/'
     'ai-uponor_smatrix-alcorcon-lab_y07e51pj_history.csv'
 )
 EXPERIMENT_LABEL = 'ai-uponor_smatrix-alcorcon-lab_y07e51pj'
@@ -61,7 +63,7 @@ SMOOTH_WINDOW = 1
 # CONFIG — OUTPUT DIRECTORIES (subcarpetas por tipo de gráfico)
 # =============================================================================
 
-OUTPUT_BASE = REPO_ROOT / 'data/paper/plots/case_study/deployment_agent_efficiency/'
+OUTPUT_BASE = REPO_ROOT / 'work/data/paper/plots/case_study/deployment_agent_efficiency/'
 OUTPUT_PROGRESS = OUTPUT_BASE / 'progress'
 OUTPUT_ZONE_TEMPERATURES = OUTPUT_BASE / 'zone_temperatures'
 OUTPUT_TEMP_VS_FLOW = OUTPUT_BASE / 'temp_vs_flow'
@@ -321,6 +323,7 @@ if training_progress:
 _zones = list(
     zip(temperature_variables, setpoint_variables, zone_names, strict=True)
 )
+temp_colors = [TAB10[0]] * len(zone_names)
 for key, df in unified.items():
     model_dir = OUTPUT_ZONE_TEMPERATURES / _slugify(key)
     _kwargs = dict(
@@ -335,7 +338,7 @@ for key, df in unified.items():
         png_width=1200,
         png_height_single=500,
         png_scale=2,
-        temp_colors=list(colors[: len(zone_names)]),
+        temp_colors=temp_colors,
         period_start=PERIOD_START,
         period_end=PERIOD_END,
     )
