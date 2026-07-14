@@ -231,7 +231,11 @@ def filter_calendar(df: pd.DataFrame, year: int, month: int, days: tuple[int, in
     loc = _to_local_series(df['datetime'])
     lo, hi = days
     mask = (loc.dt.year == year) & (loc.dt.month == month) & (loc.dt.day >= lo) & (loc.dt.day <= hi)
-    return df.loc[mask].copy().reset_index(drop=True)
+    out = df.loc[mask].copy()
+    # Plotly/Kaleido (orjson) no serializa Timestamp con zona horaria: nos quedamos
+    # con la hora local (wall time) sin zona horaria.
+    out['datetime'] = loc[mask].dt.tz_localize(None).to_numpy()
+    return out.reset_index(drop=True)
 
 
 def add_hours_from_start(df: pd.DataFrame) -> pd.DataFrame:
