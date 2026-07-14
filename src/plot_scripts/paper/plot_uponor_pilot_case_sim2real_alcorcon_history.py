@@ -32,6 +32,12 @@ from utils.plot_functions.plot_functions import (
 
 from utils.study_plot_config import TAB10
 
+# ---------------------------------------------------------------------------- #
+#                                    SHARED                                    #
+# ---------------------------------------------------------------------------- #
+ZONE_TEMP_EXPORT_WIDTH_PX = 1200
+ZONE_TEMP_EXPORT_SINGLE_HEIGHT_PX = 500
+
 # =============================================================================
 # CONFIG — SIM2REAL HISTORY (único CSV tipo monitor / Ray)
 # =============================================================================
@@ -43,7 +49,7 @@ HISTORY_CSV = REPO_ROOT / (
     'work/data/paper/data/case_study/sim2real/'
     'ai-uponor_smatrix-alcorcon-lab_y07e51pj_history.csv'
 )
-EXPERIMENT_LABEL = 'ai-uponor_smatrix-alcorcon-lab_y07e51pj'
+EXPERIMENT_LABEL = 'TQC'
 
 # Progress del entrenamiento / evaluation progress: no aplican a este CSV → vacío.
 TRAINING_PROGRESS_PATHS: dict[str, str] = {}
@@ -311,7 +317,7 @@ if training_progress:
         variable_name='mean_reward',
         colors=colors[:_n],
     )
-    fig.update_layout(title=None, xaxis_title='Episode', yaxis_title='Mean reward')
+    fig.update_layout(title=None, xaxis_title='Episode', yaxis_title='Average reward')
     save_figure(
         fig, OUTPUT_PROGRESS / 'training_progress', width=1200, height=700, scale=2
     )
@@ -323,7 +329,7 @@ if training_progress:
 _zones = list(
     zip(temperature_variables, setpoint_variables, zone_names, strict=True)
 )
-temp_colors = [TAB10[0]] * len(zone_names)
+fixed_color = [TAB10[0]] * len(zone_names)
 for key, df in unified.items():
     model_dir = OUTPUT_ZONE_TEMPERATURES / _slugify(key)
     _kwargs = dict(
@@ -335,14 +341,15 @@ for key, df in unified.items():
         summary_title=key,
         threshold=TEMPERATURE_THRESHOLD,
         outdoor_temp_var=None,
-        png_width=1200,
-        png_height_single=500,
+        png_width=ZONE_TEMP_EXPORT_WIDTH_PX,
+        png_height_single=ZONE_TEMP_EXPORT_SINGLE_HEIGHT_PX,
         png_scale=2,
-        temp_colors=temp_colors,
+        temp_colors=fixed_color,
         period_start=PERIOD_START,
         period_end=PERIOD_END,
+        paper_style=True,
     )
-    plot_case_temperatures(**_kwargs)
+    plot_case_temperatures(**_kwargs, export_zone_subfolders=True)
 
 # =============================================================================
 # FIGURES — Temperature vs flow (control)
@@ -355,7 +362,6 @@ for key, df in unified.items():
         flow_variables=flow_variables,
         names=[f'Temp {z}' for z in zone_names] + [f'Flow {z}' for z in zone_names],
         colors=colors[: len(temperature_variables) + len(flow_variables)],
-        outdoor_temp_var='outdoor_temperature',
     )
     save_figure(
         fig,
@@ -394,7 +400,8 @@ for key, df in unified.items():
             window=SMOOTH_WINDOW,
             color=colors[i % len(colors)],
             title=None,
-            yaxis_title=_y_title
+            yaxis_title=_y_title,
+            show_legend=False,
         )
         save_figure(
             fig,

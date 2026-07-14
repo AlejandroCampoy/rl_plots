@@ -30,6 +30,14 @@ from utils.plot_functions.plot_functions import (
     save_figure,
 )
 
+from utils.study_plot_config import TAB10
+
+# ---------------------------------------------------------------------------- #
+#                                    SHARED                                    #
+# ---------------------------------------------------------------------------- #
+ZONE_TEMP_EXPORT_WIDTH_PX = 1200
+ZONE_TEMP_EXPORT_SINGLE_HEIGHT_PX = 500
+
 # =============================================================================
 # CONFIG — CSV Grafana limpio (weather)
 # =============================================================================
@@ -38,7 +46,7 @@ from utils.plot_functions.plot_functions import (
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 WEATHER_CSV = REPO_ROOT / (
-    'data/paper/data/case_study/sim2real/'
+    'work/data/paper/data/case_study/sim2real/'
     'weather-2026-04-20 10_48_28_cleaned.csv'
 )
 EXPERIMENT_LABEL = 'weather_grafana_cleaned'
@@ -61,7 +69,7 @@ SMOOTH_WINDOW = 1
 # CONFIG — OUTPUT DIRECTORIES (subcarpetas por tipo de gráfico)
 # =============================================================================
 
-OUTPUT_BASE = REPO_ROOT / 'data/paper/plots/case_study/deployment_weather_efficiency/'
+OUTPUT_BASE = REPO_ROOT / 'work/data/paper/plots/case_study/deployment_weather_efficiency/'
 OUTPUT_PROGRESS = OUTPUT_BASE / 'progress'
 OUTPUT_ZONE_TEMPERATURES = OUTPUT_BASE / 'zone_temperatures'
 OUTPUT_TEMP_VS_FLOW = OUTPUT_BASE / 'temp_vs_flow'
@@ -321,7 +329,7 @@ if training_progress:
         variable_name='mean_reward',
         colors=colors[:_n],
     )
-    fig.update_layout(title=None, xaxis_title='Episode', yaxis_title='Mean reward')
+    fig.update_layout(title=None, xaxis_title='Episode', yaxis_title='Average reward')
     save_figure(
         fig, OUTPUT_PROGRESS / 'training_progress', width=1200, height=700, scale=2
     )
@@ -333,6 +341,7 @@ if training_progress:
 _zones = list(
     zip(temperature_variables, setpoint_variables, zone_names, strict=True)
 )
+fixed_color = [TAB10[0]] * len(zone_names)
 for key, df in unified.items():
     model_dir = OUTPUT_ZONE_TEMPERATURES / _slugify(key)
     _kwargs = dict(
@@ -344,14 +353,15 @@ for key, df in unified.items():
         summary_title=key,
         threshold=TEMPERATURE_THRESHOLD,
         outdoor_temp_var=None,
-        png_width=1200,
-        png_height_single=500,
+        png_width=ZONE_TEMP_EXPORT_WIDTH_PX,
+        png_height_single=ZONE_TEMP_EXPORT_SINGLE_HEIGHT_PX,
         png_scale=2,
-        temp_colors=list(colors[: len(zone_names)]),
+        temp_colors=fixed_color,
         period_start=PERIOD_START,
         period_end=PERIOD_END,
+        paper_style=True,
     )
-    plot_case_temperatures(**_kwargs)
+    plot_case_temperatures(**_kwargs, export_zone_subfolders=True)
 
 # =============================================================================
 # FIGURES — Temperature vs flow (control)
@@ -367,7 +377,6 @@ for key, df in unified.items():
         names=[f'Temp {z}' for z, c in zip(zone_names, temperature_variables) if c in df.columns]
         + [f'Flow {z}' for z, c in zip(zone_names, flow_variables) if c in df.columns],
         colors=colors[: len(_temps) + len(_flows)],
-        outdoor_temp_var='outdoor_temperature' if 'outdoor_temperature' in df.columns else None,
     )
     save_figure(
         fig,
@@ -406,7 +415,8 @@ for key, df in unified.items():
             window=SMOOTH_WINDOW,
             color=colors[i % len(colors)],
             title=None,
-            yaxis_title=_y_title
+            yaxis_title=_y_title,
+            show_legend=False,
         )
         save_figure(
             fig,

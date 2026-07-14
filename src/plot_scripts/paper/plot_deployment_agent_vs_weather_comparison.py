@@ -30,12 +30,20 @@ from utils.plot_functions.plot_functions import (
     save_figure,
 )
 
+from utils.study_plot_config import TAB10
+
+# ---------------------------------------------------------------------------- #
+#                                    SHARED                                    #
+# ---------------------------------------------------------------------------- #
+ZONE_TEMP_EXPORT_WIDTH_PX = 1200
+ZONE_TEMP_EXPORT_SINGLE_HEIGHT_PX = 500
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
-WEATHER_CSV = REPO_ROOT / 'data/paper/data/case_study/sim2real/weather-2026-04-20 10_48_28_cleaned.csv'
+WEATHER_CSV = REPO_ROOT / 'work/data/paper/data/case_study/sim2real/weather-2026-04-20 10_48_28_cleaned.csv'
 AGENT_HISTORY_CSV = REPO_ROOT / (
-    'data/paper/data/case_study/sim2real/ai-uponor_smatrix-alcorcon-lab_y07e51pj_history.csv'
+    'work/data/paper/data/case_study/sim2real/ai-uponor_smatrix-alcorcon-lab_y07e51pj_history.csv'
 )
-OUTPUT_BASE = REPO_ROOT / 'data/paper/plots/case_study/deployment_agent_vs_weather'
+OUTPUT_BASE = REPO_ROOT / 'work/data/paper/plots/case_study/deployment_agent_vs_weather'
 
 WEATHER_LABEL = 'Weather (19–20 Feb 2026)'
 AGENT_LABEL = 'Agent (29–30 Mar 2026)'
@@ -318,6 +326,7 @@ def main() -> None:
     _zones = list(zip(temperature_variables, setpoint_variables, zone_names, strict=True))
 
     # --- Temperaturas por zona (mismo flujo que by_algorithm: una carpeta por serie) ---
+    fixed_color = [TAB10[0]] * len(zone_names)
     for key, df in unified.items():
         model_dir = OUTPUT_BASE / 'zone_temperatures' / _slugify(key)
         d_med = pd.to_datetime(df['datetime']).median().normalize()
@@ -332,12 +341,14 @@ def main() -> None:
             summary_title=key,
             threshold=TEMPERATURE_THRESHOLD,
             outdoor_temp_var=None,
-            png_width=1200,
-            png_height_single=500,
+            png_width=ZONE_TEMP_EXPORT_WIDTH_PX,
+            png_height_single=ZONE_TEMP_EXPORT_SINGLE_HEIGHT_PX,
             png_scale=2,
-            temp_colors=list(colors[: len(zone_names)]),
+            temp_colors=fixed_color,
             period_start=p_start,
             period_end=p_end,
+            paper_style=True,
+            export_zone_subfolders=True,
         )
 
     # --- Temp vs flow (por fuente) ---
