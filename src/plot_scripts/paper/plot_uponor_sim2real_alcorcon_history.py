@@ -69,7 +69,7 @@ SMOOTH_WINDOW = 1
 # CONFIG — OUTPUT DIRECTORIES (subcarpetas por tipo de gráfico)
 # =============================================================================
 
-OUTPUT_BASE = REPO_ROOT / 'work/data/paper/plots/case_study/deployment_agent_efficiency/'
+OUTPUT_BASE = REPO_ROOT / 'work/data/paper/plots/case_study/rl_alcorcon_lab/'
 OUTPUT_PROGRESS = OUTPUT_BASE / 'progress'
 OUTPUT_ZONE_TEMPERATURES = OUTPUT_BASE / 'zone_temperatures'
 OUTPUT_TEMP_VS_FLOW = OUTPUT_BASE / 'temp_vs_flow'
@@ -87,6 +87,7 @@ OUTPUT_REWARD_BALANCE_SUMMARY = OUTPUT_REWARD_BALANCE / 'summary'
 # Evolución timestep a timestep dentro de un episodio (infos)
 OUTPUT_REWARD_BALANCE_PER_TIMESTEP = OUTPUT_REWARD_BALANCE / 'per_timestep'
 
+print(OUTPUT_BASE)
 for _d in (
     OUTPUT_BASE,
     OUTPUT_PROGRESS,
@@ -245,9 +246,28 @@ def _load_sim2real_history(path: Path) -> pd.DataFrame:
         return df
     rename = {k: v for k, v in _SIM2REAL_COLUMN_MAP.items() if k in df.columns}
     df = df.rename(columns=rename)
-    if '_timestamp' not in df.columns:
-        raise ValueError(f"Se esperaba la columna '_timestamp' en {path}")
-    df['datetime'] = pd.to_datetime(df['_timestamp'], unit='s')
+    # datetime: o bien desde _timestep, o bien desde year/month/day.
+    # (fallback a _timestamp para mantener compatibilidad con históricos Ray)
+
+    if "_timestamp" in df.columns:
+        df["datetime"] = pd.to_datetime(df["_timestamp"], unit="s", utc=True, errors="coerce")
+    elif {"year", "month", "day"}.issubset(df.columns):
+        ymd = pd.DataFrame(
+            {
+                "year": pd.to_numeric(df["year"], errors="coerce"),
+                "month": pd.to_numeric(df["month"], errors="coerce"),
+                "day": pd.to_numeric(df["day"], errors="coerce"),
+            }
+        )
+        dt = pd.to_datetime(ymd, errors="coerce")
+        if "hour" in df.columns:
+            hour = pd.to_numeric(df["hour"], errors="coerce").fillna(0)
+            dt = dt + pd.to_timedelta(hour, unit="h")
+        df["datetime"] = dt
+    else:
+        raise ValueError(
+            f"No se pudo inferir datetime en {path}: faltan _timestep o year/month/day."
+        )
     if 'water_temperature' not in df.columns and 'info/t_supply' in df.columns:
         df['water_temperature'] = df['info/t_supply']
     return df
