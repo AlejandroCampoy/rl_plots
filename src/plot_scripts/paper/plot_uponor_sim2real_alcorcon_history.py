@@ -11,6 +11,7 @@ from utils.plot_functions.plot_functions import (
     filer_interval,
     mean_variable,
     plot_action_distribution,
+    plot_action_distributions_grid,
     plot_bar,
     plot_bar_means_by_zones,
     plot_bar_with_std,
@@ -629,8 +630,36 @@ else:
 # =============================================================================
 # FIGURES — Action distribution (violines)
 # =============================================================================
+# Válvulas (info/valve_* → flow_rate_*): binarias {0,1} On/Off. Se unifican en
+# una rejilla 1×7 (una celda por zona), ejes Y independientes con idéntica
+# configuración (rango [0,1], grid uniforme, ticks Off/On solo en el primer
+# panel) y etiqueta TQC del eje X oculta. La temperatura del agua (°C) se aísla
+# en su propia figura (etiqueta "Temperature (°C)" y escala libre).
 
-for var in action_distribution_variables:
+_valve_grid_fig = plot_action_distributions_grid(
+    unified,
+    variables=list(flow_variables),
+    subplot_titles=zone_names,
+    colors=colors[:df_num],
+    shared_y=False,
+    y_range=(0.0, 1.0),
+    y_tickvals=(0.0, 0.25, 0.5, 0.75, 1.0),
+    y_ticktext=('Off', '', '', '', 'On'),
+    show_y_title=False,
+)
+# Oculta la etiqueta del experimento (TQC) en el eje X de cada panel.
+_valve_grid_fig.update_xaxes(showticklabels=False)
+save_figure(
+    _valve_grid_fig,
+    OUTPUT_ACTION_DISTRIBUTION / 'distribution_valves_on_off',
+    width=1800,
+    height=550,
+    scale=2,
+)
+
+# Temperatura del agua (°C): figura aislada (etiqueta "Temperature (°C)",
+# escala libre). Se oculta también la etiqueta TQC del eje X.
+for var in [water_temperature_variable]:
     fig = plot_action_distribution(
         unified,
         var,
@@ -640,6 +669,7 @@ for var in action_distribution_variables:
         title=None,
         showlegend=False,
     )
+    fig.update_xaxes(showticklabels=False)
     save_figure(
         fig,
         OUTPUT_ACTION_DISTRIBUTION / f'distribution_{_slugify(var)}',
