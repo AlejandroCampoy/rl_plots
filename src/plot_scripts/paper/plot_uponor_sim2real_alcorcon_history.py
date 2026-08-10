@@ -241,6 +241,34 @@ _SIM2REAL_COLUMN_MAP: dict[str, str] = {
 }
 
 
+def _interpolate_sensor_outliers(
+    df: pd.DataFrame,
+    cols: list[str],
+    *,
+    lo: float = 5.0,
+    hi: float = 45.0,
+) -> pd.DataFrame:
+    """Invalida lecturas fuera de un rango físico plausible y rellena por interp.
+
+    Pensado para spikes de sensor (p. ej. 1802 °C en una muestra): el valor
+    anómalo se sustituye por NaN y luego se interpola linealmente entre vecinos
+    válidos. Los NaN ya existentes en la columna también se interpolan, aunque
+    no haya valores fuera de rango. Solo aplica a las columnas indicadas
+    (temperaturas / setpoints).
+    """
+    for c in cols:
+        if c not in df.columns:
+            continue
+        s = pd.to_numeric(df[c], errors='coerce')
+        bad = (s < lo) | (s > hi)
+        if bad.any():
+            s = s.mask(bad)
+        if s.isna().any():
+            s = s.interpolate(method='linear', limit_direction='both')
+        df[c] = s
+    return df
+
+
 def _load_sim2real_history(path: Path) -> pd.DataFrame:
     df = safe_read_csv(str(path))
     if df.empty:
@@ -251,7 +279,11 @@ def _load_sim2real_history(path: Path) -> pd.DataFrame:
     # (fallback a _timestamp para mantener compatibilidad con históricos Ray)
 
     if "_timestamp" in df.columns:
-        df["datetime"] = pd.to_datetime(df["_timestamp"], unit="s", utc=True, errors="coerce")
+        # tz-naive (UTC wall-time) para que kaleido 1.3.0 pueda serializar el eje X
+        # al exportar PNG (datetime64 tz-aware rompe orjson en write_image).
+        df["datetime"] = pd.to_datetime(
+            df["_timestamp"], unit="s", utc=True, errors="coerce"
+        ).dt.tz_convert(None)
     elif {"year", "month", "day"}.issubset(df.columns):
         ymd = pd.DataFrame(
             {
@@ -271,6 +303,15 @@ def _load_sim2real_history(path: Path) -> pd.DataFrame:
         )
     if 'water_temperature' not in df.columns and 'info/t_supply' in df.columns:
         df['water_temperature'] = df['info/t_supply']
+    # Limpieza de anomalías de sensor: spikes fuera de rango físico plausible
+    # (p. ej. 1802 °C) → NaN + interpolación lineal entre vecinos. Mantiene la
+    # continuidad de la serie en los plots (sin saltos ni cortes verticales).
+    df = _interpolate_sensor_outliers(
+        df,
+        list(temperature_variables) + list(setpoint_variables),
+        lo=5.0,
+        hi=45.0,
+    )
     return df
 
 
