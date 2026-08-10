@@ -2057,6 +2057,177 @@ def plot_action_distribution(df_dict, variable, colors=None):
     return fig
 
 
+def plot_action_distributions_grid(
+    df_dict,
+    variables,
+    subplot_titles,
+    colors=None,
+    *,
+    shared_y: bool = False,
+    y_range: Tuple[float, float] = (0.0, 1.0),
+    y_tickvals: Sequence[float] = (0.0, 0.25, 0.5, 0.75, 1.0),
+    y_ticktext: Sequence[str] = ('Off', '', '', '', 'On'),
+    show_y_title: bool = False,
+    y_title: str = '',
+    violin_mean: bool = True,
+):
+    """Distribución (violines) en una rejilla de una fila, una columna por variable.
+
+    Pensada para variables binarias tipo válvula On/Off: un panel por variable
+    (p. ej. una por zona), mismo rango Y fijo (por defecto [0,1]) y ticks
+    ``On``/``Off`` compartidos en el primer panel. Reutiliza la estética de
+    :func:`plot_action_distribution` (violín simétrico + segmento de media) pero
+    apilados horizontalmente en ``plotly.subplots.make_subplots``.
+
+    ``df_dict``: nombre de experimento -> DataFrame (como en
+    :func:`plot_action_distribution`). ``variables``: lista de columnas a pintar
+    (una por celda). ``subplot_titles``: título (p. ej. nombre de zona) de cada
+    celda, alineado con ``variables``. ``colors``: un color por experimento.
+    ``shared_y``: si True, todos los paneles comparten eje Y (solo el primero
+    muestra ticks). ``y_range``: rango fijo del eje Y (acota el KDE del violín).
+    ``y_tickvals`` / ``y_ticktext``: etiquetas de ticks (por defecto Off/On en
+    0/1). ``show_y_title``: imprime ``y_title`` solo en el primer panel.
+    ``violin_mean``: dibuja el segmento de media por experimento.
+    """
+    _MEAN_SEG_HALF_WIDTH = 0.28
+
+    names = list(df_dict.keys())
+    dfs = list(df_dict.values())
+    n_vars = len(variables)
+    if n_vars != len(subplot_titles):
+        raise ValueError(
+            'variables y subplot_titles deben tener la misma longitud: '
+            f'{n_vars} vs {len(subplot_titles)}'
+        )
+
+    if colors is None:
+        colors = list(px.colors.qualitative.Plotly[: len(names)])
+
+    fig = sp.make_subplots(
+        rows=1,
+        cols=n_vars,
+        shared_yaxes=shared_y,
+        horizontal_spacing=PLOTLY_SUBPLOT_HORIZONTAL_SPACING / max(n_vars, 3),
+        subplot_titles=list(subplot_titles),
+    )
+
+    # Estilo de los títulos de subplots generados por make_subplots.
+    for ann in fig.layout.annotations:
+        ann.font = dict(
+            family=_PLOTLY_SERIF,
+            size=PLOTLY_PAPER_AXIS_TITLE_SIZE - 4,
+            color=_PLOTLY_TEXT,
+        )
+
+    cat_index = {name: i for i, name in enumerate(names)}
+
+    for col, variable in enumerate(variables, start=1):
+        xref = 'x' if col == 1 else f'x{col}'
+        yref = 'y' if col == 1 else f'y{col}'
+        col_traces = 0
+        for name, df in zip(names, dfs):
+            if variable not in df.columns:
+                continue
+            series = pd.to_numeric(df[variable], errors='coerce').dropna()
+            values = series.to_numpy(dtype=float)
+            if values.size == 0:
+                continue
+
+            mean_v = float(np.mean(values))
+            median_v = float(np.median(values))
+            q1_v = float(np.quantile(values, 0.25))
+            q3_v = float(np.quantile(values, 0.75))
+            x_cat = cat_index[name]
+
+            color = colors[cat_index[name] % len(colors)]
+            fill_rgba = _violin_fill_rgba(color, 0.75)
+
+            fig.add_trace(
+                go.Violin(
+                    y=values,
+                    x=[str(x_cat)] * len(values),
+                    name=name,
+                    scalegroup=f'grid_{col}',
+                    box_visible=False,
+                    points=False,
+                    quartilemethod='inclusive',
+                    scalemode='width',
+                    side='both',
+                    meanline_visible=False,
+                    line=dict(color=_PLOTLY_TEXT, width=1),
+                    fillcolor=fill_rgba,
+                    showlegend=False,
+                    hovertemplate=(
+                        f'Model: {name}'
+                        f'<br>Mean: {mean_v:.4f}'
+                        f'<br>Median: {median_v:.4f}'
+                        f'<br>Q1: {q1_v:.4f}'
+                        f'<br>Q3: {q3_v:.4f}'
+                        f'<br>Variable: {subplot_titles[col - 1]}'
+                        '<extra></extra>'
+                    ),
+                ),
+                row=1,
+                col=col,
+            )
+            col_traces += 1
+
+            if violin_mean:
+                fig.add_shape(
+                    type='line',
+                    x0=x_cat - _MEAN_SEG_HALF_WIDTH,
+                    x1=x_cat + _MEAN_SEG_HALF_WIDTH,
+                    y0=mean_v,
+                    y1=mean_v,
+                    xref=xref,
+                    yref=yref,
+                    layer='above',
+                    line=dict(color=_PLOTLY_TEXT, width=2, dash='solid'),
+                )
+
+        # Eje X por panel: ticks de experimento (un solo exp. -> nombre).
+        if col_traces:
+            fig.update_xaxes(
+                tickmode='array',
+                tickvals=list(range(len(names))),
+                ticktext=names,
+                range=[-0.5, (len(names) - 1) + 0.5],
+                row=1,
+                col=col,
+            )
+
+    # Eje Y idéntico en todos los paneles (independientes, no compartidos): mismo
+    # rango, ticks y grid. Solo el primer panel muestra etiquetas (Off/On).
+    for col_1 in range(1, n_vars + 1):
+        fig.update_yaxes(
+            range=list(y_range),
+            autorange=False,
+            tickmode='array',
+            tickvals=list(y_tickvals),
+            ticktext=list(y_ticktext),
+            showgrid=True,
+            showticklabels=(col_1 == 1),
+            row=1,
+            col=col_1,
+        )
+    if show_y_title:
+        fig.update_yaxes(title_text=y_title, row=1, col=1)
+
+    fig.update_layout(
+        **PLOTLY_WHITE_LAYOUT_KWARGS,
+        title=None,
+        violinmode='overlay',
+        showlegend=False,
+        font=dict(
+            family=_PLOTLY_SERIF,
+            size=PLOTLY_PAPER_FONT_SIZE,
+            color=_PLOTLY_TEXT,
+        ),
+    )
+
+    return fig
+
+
 def plot_dfs_boxplot(df_dict, variable, colors=None, yaxis_title=None,
         xaxis_title=None, title=None):
     """
@@ -2516,18 +2687,21 @@ def add_temperature_traces(
             current_segment_in["x"].append(x_vals[i])
             current_segment_in["y"].append(temp[i])
             if len(current_segment_out["x"]) > 0:
-                segments_out.append(current_segment_out.copy())
-                current_segment_out = {"x": [], "y": []}
+                # Cierra el tramo out-of-comfort incluyendo este punto frontera
+                # (evita tramos de 1 punto = "puntos flotantes" y huecos en la línea).
                 current_segment_out["x"].append(x_vals[i])
                 current_segment_out["y"].append(temp[i])
+                segments_out.append(current_segment_out.copy())
+                current_segment_out = {"x": [], "y": []}
         else:
             current_segment_out["x"].append(x_vals[i])
             current_segment_out["y"].append(temp[i])
             if len(current_segment_in["x"]) > 0:
-                segments_in.append(current_segment_in.copy())
-                current_segment_in = {"x": [], "y": []}
+                # Cierra el tramo in-comfort incluyendo este punto frontera.
                 current_segment_in["x"].append(x_vals[i])
                 current_segment_in["y"].append(temp[i])
+                segments_in.append(current_segment_in.copy())
+                current_segment_in = {"x": [], "y": []}
 
     if len(current_segment_in["x"]) > 0:
         segments_in.append(current_segment_in)
