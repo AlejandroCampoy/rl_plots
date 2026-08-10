@@ -588,9 +588,14 @@ def run_study_plots(
         for key, monitor_dir in _monitor_dirs.items()
     }
 
+    evaluation_rewards = {
+        key: safe_read_csv(os.path.join(monitor_dir, 'rewards.csv'))
+        for key, monitor_dir in _monitor_dirs.items()
+    }
+
     unified: Dict[str, pd.DataFrame] = {
         key: pd.concat(
-            [evaluation_obs[key], evaluation_infos[key]],
+            [evaluation_obs[key], evaluation_infos[key], evaluation_rewards[key]],
             axis=1,
         )
         for key in evaluation_obs.keys()
@@ -624,6 +629,9 @@ def run_study_plots(
     }
     mean_energy_consumption_dict = {
         key: mean_variable(df, variable='total_power_demand') for key, df in unified.items()
+    }
+    mean_reward_dict = {
+        key: mean_variable(df, variable='reward') for key, df in unified.items()
     }
 
     crf_trans_mean_dict = {}
@@ -810,6 +818,20 @@ def run_study_plots(
     # =============================================================================
 
     if want('means'):
+        fig = plot_bar(mean_reward_dict, bar_colors=colors[:df_num])
+        fig.update_layout(
+            title=None,
+            xaxis_title='',
+            yaxis_title='Mean episodic reward',
+        )
+        save_figure(
+            fig,
+            out_dirs.means_general / 'mean_rewards',
+            width=1200,
+            height=600,
+            scale=2,
+        )
+
         fig = plot_bar(mean_temp_violation_dict, bar_colors=colors[:df_num])
         fig.update_layout(
             title=None,
